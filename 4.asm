@@ -17,10 +17,10 @@ snakeSymb EQU 'O'
 snakeColor EQU 010  
 headColor db 14
 lenght dw 5
-border_up_down EQU 196
-border_left_right EQU '|'
+border_up_down db 196, 0Dh
+border_left_right db '|', 0Dh 
 colorOfBorder db 13
-food db 03
+food db 03, 0Ch
 msgGameOver db 'GAME OVER!$'
 msgReturn db ' Press q to exit$'  
 rand1 db 78
@@ -37,7 +37,8 @@ endm
 start: 
     call set_screen
     mov ax,@data
-    mov ds,ax
+    mov ds,ax 
+    mov ax, 0B800h
     mov es,ax
     print_str msgScore
     print_str outputScore
@@ -45,10 +46,10 @@ start:
     ;выводим информационные сообщения и границы площадки 
     
     ;ставим курсор для отрисовки хвоста
-    mov dh,02       ;номер строки
-    mov dl,01       ;номер столбца
+    mov dh,02       ;строка
+    mov dl,01       ;столбец
     mov ax,0200h 
-    int 10h  
+    int 10h 
     
     mov cx, lenght   ;кол-во символов
     dec cx 
@@ -76,27 +77,13 @@ start:
     mov dl,00            ;номер столбца для курсора  
      
     ;рисуем первый элемент в константном месте  
-    pusha
-    push 0B800h
-    pop es 
+    pusha 
+    mov cx, 2
     mov di,word ptr startPos
     mov si,offset food
     cld
     movsb
-    
-    
-    
-;    pusha 
-;    mov dh,07            ;номер строки для курсора
-;    mov dl,05
-;    mov bh,00                
-;    mov ax,0200h             ;ставим курсор на 2 строку 0 столб
-;    int 10h  
-;    mov cx,1                 ;колво символов которые выводятся за выполнение функции
-;    mov ah,09h               ;рисуем символ слева
-;    mov al,food
-;    mov bl,12 
-;    int 10h
+    movsb 
     popa
  
     call delay ; задежка  
@@ -241,7 +228,7 @@ set_random_food proc
       
     mov ax, bx
     div rand2
-    add ah, 2                                      ;---------------------------------------------------------------
+    add ah, 2                                      ;-------ЗДЕСЬ МЕНЯТЬ ЕДУ----------------------
     mov dh, ah 
     xor ax,ax 
     mov ax, bx
@@ -285,62 +272,82 @@ set_screen endp
 
 printBorders proc
     pusha                ;все регистры в стек
-    mov cx,2 
-    mov dh,01            ;номер строки для курсора
-    mov dl,00            ;номер столбца для курсора
-up_and_down:
-    push cx 
+    ;mov cx,2 
+    ;mov dh,01            ;номер строки для курсора
+    ;mov dl,00             ;номер столбца для курсора
+    mov di,0A0h
+    mov si,offset border_up_down             ;7777777777777777777777777777777777777777777
+    mov cx, 50h          
+up:
+   ; push cx 
       
-    mov bh,00            ;номер страницы для курсора
-    mov ax,0200h          ;устнановить положение курсора
-    int 10h                                          
+   ; mov bh,00            ;номер страницы для курсора
+   ; mov ax,0200h          ;устнановить положение курсора
+    ;int 10h                                          
+    dec cx
+    cld
+    movsb 
+    movsb
+    dec si
+    dec si
+    cmp cx, 0
+    jg up
+               ;количество повторений символа
+    ;mov ah,09h           ;вывод символа с заданным повторением
+   ; mov al,border_up_down        ;символ
+   ; mov bl,colorOfBorder 
+   ; int 10h                         
     
-    mov cx,80            ;количество повторений символа
-    mov ah,09h           ;вывод символа с заданным повторением
-    mov al,border_up_down        ;символ
-    mov bl,colorOfBorder 
-    int 10h                         
+    ;pop cx
+    ;mov dh,24            ;строка для нижней границы
+   ; loop up_and_down                                
     
-    pop cx
-    mov dh,24            ;строка для нижней границы
-    loop up_and_down                                
-    
-    mov dh,02            ;номер строки для курсора
-    mov dl,00            ;номер столбца для курсора  
-left_and_right:                     
+   ; mov dh,02            ;номер строки для курсора
+   ; mov dl,00            ;номер столбца для курсора 
+    mov di, 0F00h
+    mov si,offset border_up_down            ;7777777777777777777777777777777777777777777
+    mov cx, 50h
+    down: 
+    dec cx
+    cld
+    movsb 
+    movsb
+    dec si
+    dec si
+    cmp cx, 0
+    jg down    
+                     
+    mov di,1DEh
+    mov si,offset border_left_right             ;7777777777777777777777777777777777777777777
+    mov cx, 16h
+    right:
+    dec cx
+    cld
+    movsb 
+    movsb
+    dec si
+    dec si
+    add di, 158
+    cmp cx, 0
+    jg right
+                        
+    mov di,140h
+    mov si,offset border_left_right             ;7777777777777777777777777777777777777777777
+    mov cx, 16h
     left: 
-    mov bh,00                
-    mov ax,0200h             ;ставим курсор на 2 строку 0 столб
-    int 10h  
-    mov cx,1                 ;колво символов которые выводятся за выполнение функции
-    mov ah,09h               ;рисуем символ слева
-    mov al,border_left_right
-    mov bl,colorOfBorder 
-    int 10h
-    inc dh                   ;к след строке 
-    cmp dh, 17h  
-    jle  left  
-    
-    mov dh,02
-    mov dl,79                ;номер стобца
-    mov ax,0200h 
-    int 10h  
-        
-    right:                
-    mov ax,0200h             ;ставим курсор на 2 строку 0 столб
-    int 10h
-    mov cx,1                 ;рисуем символ справа
-    mov ah,09h
-    mov al,border_left_right
-    mov bl,colorOfBorder 
-    int 10h 
-    inc dh                   
-    cmp dh, 17h  
-    jle  right
-    jmp  end_of_print_Borders  
-        
+    dec cx
+    cld
+    movsb 
+    movsb
+    dec si
+    dec si
+    add di, 158
+    cmp cx, 0
+    jg left    
+    jmp  end_of_print_Borders   
+           
 end_of_print_Borders:       
-    popa
+    popa 
     ret
 printBorders endp   
  
